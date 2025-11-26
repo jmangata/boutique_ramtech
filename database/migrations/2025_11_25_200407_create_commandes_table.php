@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('name');
-            $table->float('montant_total ');
+            $table->decimal('montant',10,2);
             $table->string('statut_commande');
             $table->text('adresse_livraison');
 
