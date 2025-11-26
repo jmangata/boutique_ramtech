@@ -13,12 +13,11 @@ return new class extends Migration
     {
         Schema::create('commandes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->float('montant_total ');
-            $table->string('statut_commande');
+            $table->decimal('montant_total', 10, 2); // Préférable pour les montants
+            $table->string('statut_commande')->default('en_attente'); // Valeur par défaut recommandée
             $table->text('adresse_livraison');
-
             $table->timestamps();
         });
     }

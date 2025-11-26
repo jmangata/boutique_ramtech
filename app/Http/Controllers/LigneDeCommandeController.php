@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Ligne_de_commande;
+use App\Models\ligne_de_Commande;
 use Illuminate\Http\Request;
 
 class LigneDeCommandeController extends Controller
@@ -34,7 +34,7 @@ class LigneDeCommandeController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Ligne_de_commande $ligne_de_commande)
+    public function show(ligne_de_Commande $ligne_de_Commande)
     {
         //
     }
@@ -42,7 +42,7 @@ class LigneDeCommandeController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Ligne_de_commande $ligne_de_commande)
+    public function edit(ligne_de_Commande $ligne_de_Commande)
     {
         //
     }
@@ -50,7 +50,7 @@ class LigneDeCommandeController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Ligne_de_commande $ligne_de_commande)
+    public function update(Request $request, ligne_de_Commande $ligne_de_Commande)
     {
         //
     }
@@ -58,7 +58,7 @@ class LigneDeCommandeController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Ligne_de_commande $ligne_de_commande)
+    public function destroy(ligne_de_Commande $ligne_de_Commande)
     {
         //
     }

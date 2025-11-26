@@ -16,7 +16,6 @@ return new class extends Migration
             $table->string('titre');
             $table->text('description');
             $table->timestamps();
-            
         });
     }
 
