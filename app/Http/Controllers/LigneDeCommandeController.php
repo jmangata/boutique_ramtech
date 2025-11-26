@@ -2,64 +2,51 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ligne_de_Commande;
+use App\Models\lignedeCommande;
 use Illuminate\Http\Request;
 
 class LigneDeCommandeController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        return response()->json(LigneDeCommande::with(['commande', 'produit'])->get());
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'commande_id' => 'required|exists:commandes,id',
+            'produit_id' => 'required|exists:produits,id',
+            'quantite' => 'required|integer|min:1',
+            'prix_unitaire' => 'required|numeric|min:0',
+        ]);
+
+        $ligneDeCommande = LigneDeCommande::create($validated);
+
+        return response()->json($ligneDeCommande, 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(ligne_de_Commande $ligne_de_Commande)
+    public function show(LigneDeCommande $ligne_De_Commande)
     {
-        //
+        return response()->json($ligne_De_Commande->load(['commande', 'produit']));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(ligne_de_Commande $ligne_de_Commande)
+    public function update(Request $request, LigneDeCommande $ligne_De_Commande)
     {
-        //
+        $validated = $request->validate([
+            'quantite' => 'sometimes|integer|min:1',
+            'prix_unitaire' => 'sometimes|numeric|min:0',
+        ]);
+
+        $ligne_De_Commande->update($validated);
+
+        return response()->json($ligne_De_Commande);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, ligne_de_Commande $ligne_de_Commande)
+    public function destroy(LigneDeCommande $ligne_De_Commande)
     {
-        //
-    }
+        $ligne_De_Commande->delete();
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(ligne_de_Commande $ligne_de_Commande)
-    {
-        //
+        return response()->json(null, 204);
     }
 }
