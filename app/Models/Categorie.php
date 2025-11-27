@@ -11,7 +11,7 @@ class Categorie extends Model
     use HasFactory;
 
     /**
-     * Les attributs qui sont mass assignable.
+     * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
@@ -21,35 +21,37 @@ class Categorie extends Model
     ];
 
     /**
-     * Les attributs qui doivent être castés.
-     *
-     * @var array<string, string>
-     */
-    protected $casts = [
-        // Ajoutez ici les casts si nécessaire
-    ];
-
-    /**
-     * Relation avec les produits (si vous avez une table produits)
+     * Get the products for the category.
      */
     public function produits(): HasMany
     {
-        return $this->hasMany(Produit::class);
+        return $this->hasMany(Produit::class, 'categorie_id');
     }
 
     /**
-     * Accessor pour le titre en majuscules
+     * Get the products count for the category.
      */
-    public function getTitreAttribute($value): string
+    public function getProduitsCountAttribute(): int
     {
-        return ucfirst($value);
+        return $this->produits()->count();
     }
 
     /**
-     * Scope pour les catégories actives (si vous ajoutez un champ statut plus tard)
+     * Scope a query to only include popular categories.
      */
-    public function scopeActive($query)
+    public function scopePopular($query, $limit = 5)
     {
-        return $query->where('statut', 'actif'); // Exemple pour futur utilisation
+        return $query->withCount('produits')
+                    ->orderBy('produits_count', 'desc')
+                    ->limit($limit);
+    }
+
+    /**
+     * Scope a query to search categories.
+     */
+    public function scopeSearch($query, $search)
+    {
+        return $query->where('titre', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
     }
 }

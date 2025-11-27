@@ -2,167 +2,130 @@
 
 namespace App\Http\Controllers;
 
+ 
 use App\Models\Categorie;
-use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\RedirectResponse;
 
 class CategorieController extends Controller
 {
     /**
-     * Affiche la liste des catégories.
+     * Display a listing of the resource.
      */
-    public function index(): JsonResponse
+    public function index(): View
     {
-        try {
-            $categories = Categorie::all();
-            return response()->json([
-                'success' => true,
-                'data' => $categories
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des catégories',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $categories = Categorie::withCount('produits')
+                            ->orderBy('titre')
+                            ->paginate(10);
+
+        return view('categories.index', compact('categories'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create(): View
+    {
+        return view('categories.create');
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'titre' => 'required|string|max:255|unique:categories,titre',
-            'description' => 'required|string',
+            'description' => 'required|string|max:1000',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        Categorie::create($validated);
 
-        try {
-            $categorie = Categorie::create($validator->validated());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Catégorie créée avec succès',
-                'data' => $categorie
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la création de la catégorie',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return redirect()->route('categories.index')
+                        ->with('success', 'Catégorie créée avec succès.');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Categorie $categorie): JsonResponse
+    public function show(Categorie $categories): View
     {
-        try {
-            return response()->json([
-                'success' => true,
-                'data' => $categorie->load('produits') // Charge les relations si nécessaire
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération de la catégorie',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $categories->loadCount('produits');
+        
+        $produits = $categories->produits()
+                            ->with('Categorie')
+                            ->where('stock', '>', 0)
+                            ->orderBy('created_at', 'desc')
+                            ->paginate(12);
+
+        return view('categories.show', compact('Categorie', 'produits'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Categorie $Categorie): View
+    {
+        return view('categories.edit', compact('Categorie'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Categorie $categorie): JsonResponse
+    public function update(Request $request, Categorie $Categorie): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
-            'titre' => 'sometimes|required|string|max:255|unique:categories,titre,' . $categorie->id,
-            'description' => 'sometimes|required|string',
+        $validated = $request->validate([
+            'titre' => 'required|string|max:255|unique:categories,titre,' . $Categorie->id,
+            'description' => 'required|string|max:1000',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        $Categorie->update($validated);
 
-        try {
-            $categorie->update($validator->validated());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Catégorie mise à jour avec succès',
-                'data' => $categorie
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la mise à jour de la catégorie',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return redirect()->route('categories.index')
+                        ->with('success', 'Catégorie mise à jour avec succès.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Categorie $categorie): JsonResponse
+    public function destroy(Categorie $Categorie): RedirectResponse
     {
-        try {
-            // Vérifier si la catégorie a des produits associés
-            if ($categorie->produits()->exists()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Impossible de supprimer la catégorie car elle contient des produits'
-                ], 422);
-            }
-
-            $categorie->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Catégorie supprimée avec succès'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la suppression de la catégorie',
-                'error' => $e->getMessage()
-            ], 500);
+        // Vérifier si la catégorie contient des produits
+        if ($Categorie->produits()->exists()) {
+            return redirect()->route('categories.index')
+                            ->with('error', 'Impossible de supprimer cette catégorie car elle contient des produits.');
         }
+
+        $Categorie->delete();
+
+        return redirect()->route('categories.index')
+                        ->with('success', 'Catégorie supprimée avec succès.');
     }
 
     /**
-     * Récupère les produits d'une catégorie
+     * Search categories
      */
-    public function produits(Categorie $categorie): JsonResponse
+    public function search(Request $request): View
     {
-        try {
-            $produits = $categorie->produits;
+        $search = $request->input('search');
+        
+        $categories = Categorie::search($search)
+                            ->withCount('produits')
+                            ->paginate(10);
 
-            return response()->json([
-                'success' => true,
-                'data' => $produits
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des produits',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return view('categories.index', compact('categories', 'search'));
+    }
+
+    /**
+     * Get categories for API (for selects, etc.)
+     */
+    public function apiIndex()
+    {
+        $categories = Categorie::select('id', 'titre')
+                            ->orderBy('titre')
+                            ->get();
+
+        return response()->json($categories);
     }
 }

@@ -3,48 +3,206 @@
 namespace App\Http\Controllers;
 
 use App\Models\Panier;
+use App\Models\Produit;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 
 class PanierController extends Controller
 {
-    public function index()
+    /**
+     * Afficher le contenu du panier de l'utilisateur connecté.
+     */
+    public function index(): View
     {
-        return response()->json(Panier::with(['user', 'produit'])->get());
+        // Récupérer tous les éléments du panier de l'utilisateur avec les produits
+        $panierItems = Panier::with('produit.category')
+                            ->forUser(Auth::id())
+                            ->get();
+
+        // Calculer le sous-total total du panier
+        $sousTotal = 0;
+        $canCheckout = true;
+
+        foreach ($panierItems as $item) {
+            $sousTotal += $item->sous_total;
+            
+            // Vérifier si tous les produits sont disponibles
+            if (!$item->est_disponible) {
+                $canCheckout = false;
+            }
+        }
+
+        return view('panier.index', compact('panierItems', 'sousTotal', 'canCheckout'));
     }
 
-    public function store(Request $request)
+    /**
+     * Ajouter un produit au panier.
+     */
+    public function store(Request $request, Produit $produit): RedirectResponse
     {
-        $validated = $request->validate([
-            'produit_id' => 'required|exists:produits,id',
-            'user_id' => 'required|exists:users,id',
-            'quantite' => 'required|integer|min:1',
+        // Valider la quantité
+        $request->validate([
+            'quantite' => 'required|integer|min:1|max:' . min($produit->stock, 99),
         ]);
 
-        $panier = Panier::create($validated);
+        $quantite = $request->quantite;
 
-        return response()->json($panier, 201);
+        // Vérifier si le produit est en stock
+        if ($produit->stock < $quantite) {
+            return back()->with('error', 'Stock insuffisant pour ce produit.');
+        }
+
+        // Vérifier si le produit est déjà dans le panier
+        $panierExist = Panier::where('user_id', Auth::id())
+                            ->where('produit_id', $produit->id)
+                            ->first();
+
+        if ($panierExist) {
+            // Mettre à jour la quantité si le produit est déjà dans le panier
+            $nouvelleQuantite = $panierExist->quantite + $quantite;
+            
+            // Vérifier que la nouvelle quantité ne dépasse pas le stock
+            if ($nouvelleQuantite > $produit->stock) {
+                return back()->with('error', 'La quantité demandée dépasse le stock disponible.');
+            }
+
+            $panierExist->update(['quantite' => $nouvelleQuantite]);
+            
+            $message = 'Quantité mise à jour dans le panier.';
+        } else {
+            // Créer un nouvel élément dans le panier
+            Panier::create([
+                'user_id' => Auth::id(),
+                'produit_id' => $produit->id,
+                'quantite' => $quantite,
+            ]);
+            
+            $message = 'Produit ajouté au panier avec succès.';
+        }
+
+        return redirect()->route('panier.index')
+                        ->with('success', $message);
     }
 
-    public function show(Panier $panier)
+    /**
+     * Mettre à jour la quantité d'un produit dans le panier.
+     */
+    public function update(Request $request, Panier $panier): RedirectResponse
     {
-        return response()->json($panier->load(['user', 'produit']));
-    }
+        // Vérifier que l'utilisateur peut modifier cet élément du panier
+        if ($panier->user_id !== Auth::id()) {
+            abort(403, 'Action non autorisée.');
+        }
 
-    public function update(Request $request, Panier $panier)
-    {
-        $validated = $request->validate([
-            'quantite' => 'required|integer|min:1',
+        $request->validate([
+            'action' => 'required|in:increase,decrease',
         ]);
 
-        $panier->update($validated);
+        $action = $request->action;
+        $nouvelleQuantite = $panier->quantite;
 
-        return response()->json($panier);
+        if ($action === 'increase') {
+            // Augmenter la quantité
+            if ($nouvelleQuantite < $panier->quantite_maximale) {
+                $nouvelleQuantite++;
+            } else {
+                return back()->with('error', 'Quantité maximale atteinte pour ce produit.');
+            }
+        } elseif ($action === 'decrease') {
+            // Diminuer la quantité
+            if ($nouvelleQuantite > 1) {
+                $nouvelleQuantite--;
+            } else {
+                return back()->with('error', 'La quantité ne peut pas être inférieure à 1.');
+            }
+        }
+
+        // Mettre à jour la quantité dans le panier
+        $panier->update(['quantite' => $nouvelleQuantite]);
+
+        return back()->with('success', 'Quantité mise à jour.');
     }
 
-    public function destroy(Panier $panier)
+    /**
+     * Supprimer un produit du panier.
+     */
+    public function destroy(Panier $panier): RedirectResponse
     {
+        // Vérifier que l'utilisateur peut supprimer cet élément du panier
+        if ($panier->user_id !== Auth::id()) {
+            abort(403, 'Action non autorisée.');
+        }
+
+        // Supprimer l'élément du panier
         $panier->delete();
 
-        return response()->json(null, 204);
+        return back()->with('success', 'Produit retiré du panier.');
+    }
+
+    /**
+     * Vider complètement le panier de l'utilisateur.
+     */
+    public function clear(): RedirectResponse
+    {
+        // Supprimer tous les éléments du panier de l'utilisateur
+        Panier::forUser(Auth::id())->delete();
+
+        return redirect()->route('panier.index')
+                        ->with('success', 'Panier vidé avec succès.');
+    }
+
+    /**
+     * Afficher le nombre d'articles dans le panier (pour l'API ou les composants).
+     */
+    public function count()
+    {
+        $count = Panier::forUser(Auth::id())->count();
+        
+        return response()->json(['count' => $count]);
+    }
+
+    /**
+     * Calculer le sous-total du panier (pour l'API ou les composants).
+     */
+    public function subtotal()
+    {
+        $panierItems = Panier::with('produit')
+                            ->forUser(Auth::id())
+                            ->get();
+
+        $sousTotal = 0;
+        foreach ($panierItems as $item) {
+            $sousTotal += $item->sous_total;
+        }
+
+        return response()->json([
+            'sous_total' => $sousTotal,
+            'sous_total_formate' => number_format($sousTotal, 2, ',', ' ') . ' €'
+        ]);
+    }
+
+    /**
+     * Vérifier la disponibilité des produits dans le panier.
+     */
+    public function checkAvailability(): View
+    {
+        $panierItems = Panier::with('produit')
+                            ->forUser(Auth::id())
+                            ->get();
+
+        $produitsIndisponibles = [];
+        $produitsStockFaible = [];
+
+        foreach ($panierItems as $item) {
+            if ($item->est_en_rupture) {
+                $produitsIndisponibles[] = $item;
+            } elseif ($item->stock_faible) {
+                $produitsStockFaible[] = $item;
+            }
+        }
+
+        return view('panier.verification', compact('panierItems', 'produitsIndisponibles', 'produitsStockFaible'));
     }
 }

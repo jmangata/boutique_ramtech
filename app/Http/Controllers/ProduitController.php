@@ -3,227 +3,219 @@
 namespace App\Http\Controllers;
 
 use App\Models\Produit;
-use Illuminate\Http\JsonResponse;
+use App\Models\Categorie;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class ProduitController extends Controller
 {
     /**
-     * Affiche la liste des produits.
+     * Display a listing of the resource.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): View
     {
-        try {
-            $query = Produit::with(['categorie']);
+        $query = Produit::with('categorie')
+                        ->withCount('lignedeCommandes');
 
-            // Filtrage par prix
-            if ($request->has('prix_min') || $request->has('prix_max')) {
-                $min = $request->get('prix_min', 0);
-                $max = $request->get('prix_max', 999999);
-                $query->prixBetween($min, $max);
-            }
-
-            // Recherche
-            if ($request->has('search')) {
-                $query->search($request->get('search'));
-            }
-
-            // Tri
-            if ($request->has('sort')) {
-                $sort = $request->get('sort');
-                if ($sort === 'prix_asc') {
-                    $query->prixCroissant();
-                } elseif ($sort === 'prix_desc') {
-                    $query->prixDecroissant();
-                }
-            }
-
-            $produits = $query->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $produits
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des produits',
-                'error' => $e->getMessage()
-            ], 500);
+        // Filtre par catégorie
+        if ($request->has('category') && $request->category) {
+            $query->where('categorie_id', $request->category);
         }
+
+        // Filtre par recherche
+        if ($request->has('search') && $request->search) {
+            $query->search($request->search);
+        }
+
+        // Filtre par prix maximum
+        if ($request->has('max_price') && $request->max_price) {
+            $query->where('prix', '<=', $request->max_price);
+        }
+
+        // Tri
+        $sort = $request->get('sort', 'newest');
+        switch ($sort) {
+            case 'price_asc':
+                $query->orderByPrice('asc');
+                break;
+            case 'price_desc':
+                $query->orderByPrice('desc');
+                break;
+            case 'name':
+                $query->orderBy('titre', 'asc');
+                break;
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        $produits = $query->paginate(12);
+        $categories = Categorie::all();
+
+        return view('produits.index', compact('produits', 'categories'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create(): View
+    {
+        $categories = Categorie::all();
+        return view('produits.create', compact('categories'));
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
-            'titre' => 'required|string|max:255|unique:produits,titre',
+        $validated = $request->validate([
+            'titre' => 'required|string|max:255',
             'description' => 'required|string',
             'prix' => 'required|numeric|min:0',
-            'categorie_id' => 'sometimes|exists:categories,id',
+            'stock' => 'required|integer|min:0',
+            'categorie_id' => 'required|exists:categories,id',
+            'image_url' => 'nullable|url|max:500',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        Produit::create($validated);
 
-        try {
-            $produit = Produit::create($validator->validated());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Produit créé avec succès',
-                'data' => $produit->load('categorie')
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la création du produit',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return redirect()->route('produits.index')
+                        ->with('success', 'Produit créé avec succès.');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Produit $produit): JsonResponse
+    public function show(Produit $produit): View
     {
-        try {
-            return response()->json([
-                'success' => true,
-                'data' => $produit->load(['categorie', 'paniers', 'ligneDeCommandes'])
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération du produit',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $produit->load('category');
+        
+        // Produits suggérés (même catégorie)
+        $suggestedProducts = Produit::where('categorie_id', $produit->categorie_id)
+                                    ->where('id', '!=', $produit->id)
+                                    ->available()
+                                    ->limit(4)
+                                    ->get();
+
+        return view('produits.show', compact('produit', 'suggestedProducts'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Produit $produit): View
+    {
+        $categories = Categorie::all();
+        return view('produits.edit', compact('produit', 'categories'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Produit $produit): JsonResponse
+    public function update(Request $request, Produit $produit): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
-            'titre' => 'sometimes|required|string|max:255|unique:produits,titre,' . $produit->id,
-            'description' => 'sometimes|required|string',
-            'prix' => 'sometimes|required|numeric|min:0',
-            'categorie_id' => 'sometimes|exists:categories,id',
+        $validated = $request->validate([
+            'titre' => 'required|string|max:255',
+            'description' => 'required|string',
+            'prix' => 'required|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+            'categorie_id' => 'required|exists:categories,id',
+            'image_url' => 'nullable|url|max:500',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        $produit->update($validated);
 
-        try {
-            $produit->update($validator->validated());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Produit mis à jour avec succès',
-                'data' => $produit->load('categorie')
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la mise à jour du produit',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return redirect()->route('produits.index')
+                        ->with('success', 'Produit mis à jour avec succès.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Produit $produit): JsonResponse
+    public function destroy(Produit $produit): RedirectResponse
     {
-        try {
-            // Vérifier si le produit est utilisé dans des paniers ou commandes
-            if ($produit->paniers()->exists() || $produit->ligneDeCommandes()->exists()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Impossible de supprimer le produit car il est utilisé dans des paniers ou commandes'
-                ], 422);
-            }
-
-            $produit->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Produit supprimé avec succès'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la suppression du produit',
-                'error' => $e->getMessage()
-            ], 500);
+        // Vérifier si le produit est dans des commandes
+        if ($produit->lignedeCommandes()->exists()) {
+            return redirect()->route('produits.index')
+                            ->with('error', 'Impossible de supprimer ce produit car il est associé à des commandes.');
         }
+
+        // Vérifier si le produit est dans des paniers
+        if ($produit->panierItems()->exists()) {
+            return redirect()->route('produits.index')
+                            ->with('error', 'Impossible de supprimer ce produit car il est dans des paniers.');
+        }
+
+        $produit->delete();
+
+        return redirect()->route('produits.index')
+                        ->with('success', 'Produit supprimé avec succès.');
     }
 
     /**
-     * Recherche des produits
+     * Display products by category.
      */
-    public function search(Request $request): JsonResponse
+    public function byCategory(Categorie $category): View
     {
-        $validator = Validator::make($request->all(), [
-            'q' => 'required|string|min:2',
-        ]);
+        $produits = Produit::where('categorie_id', $category->id)
+                          ->with('category')
+                          ->available()
+                          ->orderBy('created_at', 'desc')
+                          ->paginate(12);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        $categories = Categorie::all();
 
-        try {
-            $produits = Produit::search($request->get('q'))->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $produits
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la recherche',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return view('produits.index', compact('produits', 'categories', 'category'));
     }
 
     /**
-     * Récupère les produits par catégorie
+     * Search products.
      */
-    public function byCategorie($categorieId): JsonResponse
+    public function search(Request $request): View
     {
-        try {
-            $produits = Produit::where('categorie_id', $categorieId)->get();
+        $search = $request->input('search');
+        
+        $produits = Produit::search($search)
+                          ->with('category')
+                          ->available()
+                          ->orderBy('created_at', 'desc')
+                          ->paginate(12);
 
-            return response()->json([
-                'success' => true,
-                'data' => $produits
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des produits par catégorie',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $categories = Categorie::all();
+
+        return view('produits.index', compact('produits', 'categories', 'search'));
+    }
+
+    /**
+     * Get low stock products.
+     */
+    public function lowStock(): View
+    {
+        $produits = Produit::where('stock', '<', 5)
+                          ->where('stock', '>', 0)
+                          ->with('category')
+                          ->orderBy('stock', 'asc')
+                          ->paginate(12);
+
+        $categories = Categorie::all();
+
+        return view('produits.index', compact('produits', 'categories'));
+    }
+
+    /**
+     * Get out of stock products.
+     */
+    public function outOfStock(): View
+    {
+        $produits = Produit::where('stock', 0)
+                          ->with('category')
+                          ->orderBy('created_at', 'desc')
+                          ->paginate(12);
+
+        $categories = Categorie::all();
+
+        return view('produits.index', compact('produits', 'categories'));
     }
 }

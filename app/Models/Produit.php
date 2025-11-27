@@ -1,18 +1,18 @@
 <?php
-
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\LigneDeCommande;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Produit extends Model
 {
     use HasFactory;
 
     /**
-     * Les attributs qui sont mass assignable.
+     * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
@@ -20,88 +20,120 @@ class Produit extends Model
         'titre',
         'description',
         'prix',
-        'categorie_id', // Si vous avez une relation avec les catégories
+        'stock',
+        'categorie_id',
+        'image_url'
     ];
 
     /**
-     * Les attributs qui doivent être castés.
+     * The attributes that should be cast.
      *
      * @var array<string, string>
      */
     protected $casts = [
         'prix' => 'decimal:2',
+        'stock' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
-     * Relation avec la catégorie
+     * Get the category that owns the product.
      */
-    public function categorie(): BelongsTo
+    public function category(): BelongsTo
     {
-        return $this->belongsTo(Categorie::class);
+        return $this->belongsTo(Categorie::class, 'categorie_id');
     }
 
     /**
-     * Relation avec le panier
+     * Get the order items for the product.
      */
-    public function paniers(): HasMany
-    {
-        return $this->hasMany(Panier::class);
-    }
-
-    /**
-     * Relation avec les lignes de commande
-     */
-    public function ligneDeCommandes(): HasMany
+    public function lignedeCommandes(): HasMany
     {
         return $this->hasMany(LigneDeCommande::class);
     }
 
     /**
-     * Accessor pour le titre en majuscules
+     * Get the cart items for the product.
      */
-    public function getTitreAttribute($value): string
+    public function panierItems(): HasMany
     {
-        return ucfirst($value);
+        return $this->hasMany(Panier::class);
     }
 
     /**
-     * Accessor pour formater le prix
+     * Scope a query to only include available products.
      */
-    public function getPrixFormateAttribute(): string
+    public function scopeAvailable($query)
+    {
+        return $query->where('stock', '>', 0);
+    }
+
+    /**
+     * Scope a query to only include products in a category.
+     */
+    public function scopeInCategory($query, $categoryId)
+    {
+        return $query->where('categorie_id', $categoryId);
+    }
+
+    /**
+     * Scope a query to search products.
+     */
+    public function scopeSearch($query, $search)
+    {
+        return $query->where('titre', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
+    }
+
+    /**
+     * Scope a query to order by price.
+     */
+    public function scopeOrderByPrice($query, $direction = 'asc')
+    {
+        return $query->orderBy('prix', $direction);
+    }
+
+    /**
+     * Check if product is in stock.
+     */
+    public function getInStockAttribute(): bool
+    {
+        return $this->stock > 0;
+    }
+
+    /**
+     * Get formatted price.
+     */
+    public function getFormattedPrixAttribute(): string
     {
         return number_format($this->prix, 2, ',', ' ') . ' €';
     }
 
     /**
-     * Scope pour les produits par prix croissant
+     * Get stock status.
      */
-    public function scopePrixCroissant($query)
+    public function getStockStatusAttribute(): string
     {
-        return $query->orderBy('prix', 'asc');
+        if ($this->stock == 0) {
+            return 'rupture';
+        } elseif ($this->stock < 5) {
+            return 'faible';
+        } else {
+            return 'disponible';
+        }
     }
 
     /**
-     * Scope pour les produits par prix décroissant
+     * Get stock status color.
      */
-    public function scopePrixDecroissant($query)
+    public function getStockStatusColorAttribute(): string
     {
-        return $query->orderBy('prix', 'desc');
-    }
-
-    /**
-     * Scope pour les produits dans une fourchette de prix
-     */
-    public function scopePrixBetween($query, $min, $max)
-    {
-        return $query->whereBetween('prix', [$min, $max]);
-    }
-
-    /**
-     * Scope pour rechercher par titre ou description
-     */
-    public function scopeSearch($query, $term)
-    {
-        return $query->where('titre', 'like', "%{$term}%")
-                    ->orWhere('description', 'like', "%{$term}%");
+        return match($this->stock_status) {
+            'rupture' => 'red',
+            'faible' => 'orange',
+            'disponible' => 'green',
+            default => 'gray'
+        };
     }
 }

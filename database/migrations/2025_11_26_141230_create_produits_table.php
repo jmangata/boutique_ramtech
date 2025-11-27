@@ -13,9 +13,11 @@ return new class extends Migration
     {
         Schema::create('produits', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('categorie_id')->constrained()->onDelete('cascade');
             $table->string('titre');
             $table->text('description');
             $table->decimal('prix', 8, 2);
+
             $table->timestamps();
         });
     }
