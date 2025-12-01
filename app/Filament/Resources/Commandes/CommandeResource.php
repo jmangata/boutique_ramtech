@@ -2,17 +2,18 @@
 
 namespace App\Filament\Resources\Commandes;
 
-use App\Filament\Resources\Commandes\Pages\CreateCommande;
+use BackedEnum;
+use App\Models\Commande;
+use Filament\Tables\Table;
+use Filament\Schemas\Schema;
+use Filament\Resources\Resource;
+use Filament\Support\Icons\Heroicon;
 use App\Filament\Resources\Commandes\Pages\EditCommande;
 use App\Filament\Resources\Commandes\Pages\ListCommandes;
+use App\Filament\Resources\Commandes\Pages\CreateCommande;
 use App\Filament\Resources\Commandes\Schemas\CommandeForm;
 use App\Filament\Resources\Commandes\Tables\CommandesTable;
-use App\Models\Commande;
-use BackedEnum;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Table;
+use App\Filament\Resources\Commandes\RelationManagers\LignedeCommandesRelationManager;
 
 class CommandeResource extends Resource
 {
@@ -32,10 +33,11 @@ class CommandeResource extends Resource
         return CommandesTable::configure($table);
     }
 
+    
     public static function getRelations(): array
     {
         return [
-            //
+            LignedeCommandesRelationManager::class,
         ];
     }
 
