@@ -17,7 +17,7 @@ class PanierController extends Controller
     public function index(): View
     {
         // Récupérer tous les éléments du panier de l'utilisateur avec les produits
-        $panierItems = Panier::with('produit.category')
+        $panierItems = Panier::with('produit.categorie')
                             ->forUser(Auth::id())
                             ->get();
 
@@ -28,10 +28,6 @@ class PanierController extends Controller
         foreach ($panierItems as $item) {
             $sousTotal += $item->sous_total;
             
-            // Vérifier si tous les produits sont disponibles
-            if (!$item->est_disponible) {
-                $canCheckout = false;
-            }
         }
 
         return view('panier.index', compact('panierItems', 'sousTotal', 'canCheckout'));
@@ -40,51 +36,36 @@ class PanierController extends Controller
     /**
      * Ajouter un produit au panier.
      */
-    public function store(Request $request, Produit $produit): RedirectResponse
+    public function store(Request $request)
     {
-        // Valider la quantité
-        $request->validate([
-            'quantite' => 'required|integer|min:1|max:' . min($produit->stock, 99),
+     
+{
+    $request->validate([
+        'produit_id' => 'required|exists:produits,id',
+        'quantite' => 'required|integer|min:1',
+    ]);
+
+    $produit = Produit::findOrFail($request->produit_id);
+
+    $panierExist = Panier::where('user_id', Auth::id())
+                    ->where('produit_id', $produit->id)
+                    ->first();
+
+    if ($panierExist) {
+        $panierExist->update([
+            'quantite' => $panierExist->quantite + $request->quantite
         ]);
-
-        $quantite = $request->quantite;
-
-        // Vérifier si le produit est en stock
-        if ($produit->stock < $quantite) {
-            return back()->with('error', 'Stock insuffisant pour ce produit.');
-        }
-
-        // Vérifier si le produit est déjà dans le panier
-        $panierExist = Panier::where('user_id', Auth::id())
-                            ->where('produit_id', $produit->id)
-                            ->first();
-
-        if ($panierExist) {
-            // Mettre à jour la quantité si le produit est déjà dans le panier
-            $nouvelleQuantite = $panierExist->quantite + $quantite;
-            
-            // Vérifier que la nouvelle quantité ne dépasse pas le stock
-            if ($nouvelleQuantite > $produit->stock) {
-                return back()->with('error', 'La quantité demandée dépasse le stock disponible.');
-            }
-
-            $panierExist->update(['quantite' => $nouvelleQuantite]);
-            
-            $message = 'Quantité mise à jour dans le panier.';
-        } else {
-            // Créer un nouvel élément dans le panier
-            Panier::create([
-                'user_id' => Auth::id(),
-                'produit_id' => $produit->id,
-                'quantite' => $quantite,
-            ]);
-            
-            $message = 'Produit ajouté au panier avec succès.';
-        }
-
-        return redirect()->route('panier.index')
-                        ->with('success', $message);
+    } else {
+        Panier::create([
+            'user_id' => Auth::id(),
+            'produit_id' => $produit->id,
+            'quantite' => $request->quantite,
+        ]);
     }
+
+    return redirect()->route('panier.index')->with('success', 'Produit ajouté au panier.');
+}
+}
 
     /**
      * Mettre à jour la quantité d'un produit dans le panier.
@@ -181,28 +162,5 @@ class PanierController extends Controller
             'sous_total' => $sousTotal,
             'sous_total_formate' => number_format($sousTotal, 2, ',', ' ') . ' €'
         ]);
-    }
-
-    /**
-     * Vérifier la disponibilité des produits dans le panier.
-     */
-    public function checkAvailability(): View
-    {
-        $panierItems = Panier::with('produit')
-                            ->forUser(Auth::id())
-                            ->get();
-
-        $produitsIndisponibles = [];
-        $produitsStockFaible = [];
-
-        foreach ($panierItems as $item) {
-            if ($item->est_en_rupture) {
-                $produitsIndisponibles[] = $item;
-            } elseif ($item->stock_faible) {
-                $produitsStockFaible[] = $item;
-            }
-        }
-
-        return view('panier.verification', compact('panierItems', 'produitsIndisponibles', 'produitsStockFaible'));
     }
 }

@@ -109,9 +109,9 @@
                 <tbody class="divide-y divide-gray-200">
                     @forelse($commandes as $commande)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ $commande->id }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $commande->user->name ?? 'N/A' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($commande->montant_total, 2) }} €</td>
+                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ $commande->id}}</td> 
+                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $commande->user->name ?? 'N/A' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($commande->montant_total, 2) }} €</td> 
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 py-1 text-xs rounded-full 
                                 {{ $commande->statut_commande == 'en_attente' ? 'bg-yellow-100 text-yellow-800' : '' }}
