@@ -1,11 +1,9 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Catégories - Boutique Ramtech</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
+@extends('layouts.boutique')
+
+@section('content')
+    
+<title>Gestion des Catégories - Boutique Ramtech</title>
+  
 <body class="bg-gray-50">
     <div class="container mx-auto px-4 py-8">
         <!-- En-tête de la page avec titre et actions -->
@@ -13,16 +11,14 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">Gestion des Catégories</h1>
-                    <p class="text-gray-600 mt-2">Administrez les catégories de produits de votre boutique</p>
+                    
                 </div>
-                <!-- Bouton de création d'une nouvelle catégorie -->
-                <a href="{{ route('categories.create') }}" 
-                   class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-medium flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Nouvelle Catégorie
-                </a>
+                 
+
+                 
+                   
+                
+
             </div>
         </div>
 
@@ -146,28 +142,6 @@
                                 </svg>
                             </a>
 
-                            <!-- Bouton Modifier -->
-                            <a href="{{ route('categories.edit', $categorie) }}" 
-                               class="text-green-600 hover:text-green-800 transition p-2 rounded-lg hover:bg-green-50"
-                               title="Modifier la catégorie">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                </svg>
-                            </a>
-
-                            <!-- Bouton Supprimer -->
-                            <form action="{{ route('categories.destroy', $categorie) }}" method="POST" class="inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" 
-                                        class="text-red-600 hover:text-red-800 transition p-2 rounded-lg hover:bg-red-50"
-                                        title="Supprimer la catégorie"
-                                        onclick="return confirm('Êtes-vous sûr de vouloir supprimer la catégorie \"{{ $categorie->titre }}\" ?')">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </form>
                         </div>
                     </div>
 
@@ -252,22 +226,8 @@
         </div>
         @endif
 
-        <!-- Section d'aide/informations -->
-        <div class="mt-8 bg-blue-50 rounded-lg p-6">
-            <div class="flex items-start">
-                <svg class="w-6 h-6 text-blue-400 mr-3 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <div>
-                    <h3 class="text-lg font-semibold text-blue-900 mb-2">Gestion des catégories</h3>
-                    <p class="text-blue-700 text-sm">
-                        Les catégories vous permettent d'organiser vos produits par type ou famille. 
-                        Vous ne pouvez pas supprimer une catégorie qui contient des produits. 
-                        Pensez à réassigner ou supprimer les produits avant de supprimer une catégorie.
-                    </p>
-                </div>
-            </div>
-        </div>
+      
     </div>
 </body>
 </html>
+@endsection

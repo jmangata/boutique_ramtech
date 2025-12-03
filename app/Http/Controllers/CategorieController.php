@@ -49,19 +49,21 @@ class CategorieController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Categorie $categories): View
-    {
-        $categories->loadCount('produits');
-        
-        $produits = $categories->produits()
-                            ->with('Categorie')
-                            ->where('stock', '>', 0)
-                            ->orderBy('created_at', 'desc')
-                            ->paginate(12);
+ public function show(Categorie $categories): View
+{
+    $categories->loadCount('produits');
+    
+    $produits = $categories->produits()
+                        ->with('categorie')
+                        ->where('stock', '>', 0)
+                        ->orderBy('created_at', 'desc')
+                        ->paginate(12);
 
-        return view('categories.show', compact('Categorie', 'produits'));
-    }
-
+    return view('categories.show', [
+        'categorie' => $categories,
+        'produits' => $produits
+    ]);
+}
     /**
      * Show the form for editing the specified resource.
      */

@@ -19,7 +19,7 @@ class ProduitController extends Controller
                         ->withCount('lignedeCommandes');
 
         // Filtre par catégorie
-        if ($request->has('category') && $request->category) {
+        if ($request->has('categorie') && $request->category) {
             $query->where('categorie_id', $request->category);
         }
 
@@ -74,9 +74,9 @@ class ProduitController extends Controller
             'titre' => 'required|string|max:255',
             'description' => 'required|string',
             'prix' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
+           
             'categorie_id' => 'required|exists:categories,id',
-            'image_url' => 'nullable|url|max:500',
+           
         ]);
 
         Produit::create($validated);
@@ -90,7 +90,7 @@ class ProduitController extends Controller
      */
     public function show(Produit $produit): View
     {
-        $produit->load('category');
+        $produit->load('categorie');
         
         // Produits suggérés (même catégorie)
         $suggestedProducts = Produit::where('categorie_id', $produit->categorie_id)
@@ -120,9 +120,7 @@ class ProduitController extends Controller
             'titre' => 'required|string|max:255',
             'description' => 'required|string',
             'prix' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
             'categorie_id' => 'required|exists:categories,id',
-            'image_url' => 'nullable|url|max:500',
         ]);
 
         $produit->update($validated);
@@ -167,7 +165,7 @@ class ProduitController extends Controller
 
         $categories = Categorie::all();
 
-        return view('produits.index', compact('produits', 'categories', 'category'));
+        return view('produits.index', compact('produits', 'categories', 'categorie'));
     }
 
     /**
@@ -178,7 +176,7 @@ class ProduitController extends Controller
         $search = $request->input('search');
         
         $produits = Produit::search($search)
-                          ->with('category')
+                          ->with('categorie')
                           ->available()
                           ->orderBy('created_at', 'desc')
                           ->paginate(12);
@@ -195,7 +193,7 @@ class ProduitController extends Controller
     {
         $produits = Produit::where('stock', '<', 5)
                           ->where('stock', '>', 0)
-                          ->with('category')
+                          ->with('categorie')
                           ->orderBy('stock', 'asc')
                           ->paginate(12);
 
@@ -210,7 +208,7 @@ class ProduitController extends Controller
     public function outOfStock(): View
     {
         $produits = Produit::where('stock', 0)
-                          ->with('category')
+                          ->with('categorie')
                           ->orderBy('created_at', 'desc')
                           ->paginate(12);
 

@@ -16,7 +16,7 @@ class CommandeController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = Commande::with(['user', 'ligneCommandes.produit']);
+        $query = Commande::with(['user', 'lignes.produit']);
 
         // Filtre par statut
         if ($request->has('statut') && $request->statut) {
@@ -37,8 +37,8 @@ class CommandeController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $commandes = $query->orderBy('created_at', 'desc')
-                          ->paginate(15);
+       $commandes = $query->orderBy('created_at', 'desc')->paginate(15);
+
 
         $stats = [
             'total' => Commande::count(),
@@ -85,7 +85,7 @@ class CommandeController extends Controller
      */
     public function show(Commande $commande): View
     {
-        $commande->load(['user', 'ligneCommandes.produit.category']);
+        $commande->load(['user', 'lignes.produit.category']);
 
         return view('commandes.show', compact('commande'));
     }
@@ -175,7 +175,7 @@ class CommandeController extends Controller
     public function userOrders(Request $request): View
     {
         $commandes = Commande::where('user_id', Auth::id())
-                            ->with('ligneCommandes.produit')
+                            ->with('lignes.produit')
                             ->orderBy('created_at', 'desc')
                             ->paginate(10);
 
@@ -190,7 +190,7 @@ class CommandeController extends Controller
         $search = $request->input('search');
         
         $commandes = Commande::search($search)
-                            ->with(['user', 'ligneCommandes.produit'])
+                            ->with(['user', 'lignes.produit'])
                             ->orderBy('created_at', 'desc')
                             ->paginate(15);
 
@@ -225,7 +225,7 @@ class CommandeController extends Controller
         }
 
         $commandes = Commande::{$method}()
-                            ->with(['user', 'ligneCommandes.produit'])
+                            ->with(['user', 'lignes.produit'])
                             ->orderBy('created_at', 'desc')
                             ->paginate(15);
 

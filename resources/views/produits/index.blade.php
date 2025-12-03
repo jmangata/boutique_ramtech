@@ -1,47 +1,9 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boutique Ramtech - Votre boutique high-tech</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
-        <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center py-4">
-                <div class="flex items-center space-x-8">
-                    <a href="{{ route('produits.index') }}" class="text-xl font-bold text-gray-800">Boutique Ramtech</a>
-                    <div class="hidden md:flex space-x-4">
-                        <a href="{{ route('produits.index') }}" class="text-blue-600 font-medium">Accueil</a>
-                        <a href="{{ route('produits.index') }}" class="text-gray-600 hover:text-gray-900 transition">Boutique</a>
-                        <a href="{{ route('categories.index') }}" class="text-gray-600 hover:text-gray-900 transition">Catégories</a>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="{{ route('panier.index') }}" class="text-gray-600 hover:text-gray-900 transition">
-                        Panier (0)
-                    </a>
-                    <a href="{{ route('login') }}" class="text-gray-600 hover:text-gray-900 transition">Connexion</a>
-                </div>
-            </div>
-        </div>
-    </nav>
+@extends('layouts.boutique')
 
-    <!-- Hero Section -->
-    <div class="bg-blue-600 text-white">
-        <div class="container mx-auto px-4 py-16">
-            <div class="text-center">
-                <h1 class="text-4xl md:text-5xl font-bold mb-4">Bienvenue chez Ramtech</h1>
-                <p class="text-xl mb-8">Découvrez notre sélection de produits high-tech au meilleur prix</p>
-                <a href="{{ route('produits.index') }}" 
-                   class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
-                    Voir tous les produits
-                </a>
-            </div>
-        </div>
-    </div>
+@section('content')
+
+    <x-herossection />
+
 
     <div class="container mx-auto px-4 py-8">
         <!-- Filtres et recherche -->
@@ -142,31 +104,7 @@
         @endif
 
         <!-- Catégories populaires -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Catégories populaires</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                @foreach($categories->take(4) as $categorie)
-                <a href="{{ route('produits.byCategorie', $categorie) }}" 
-                   class="bg-gray-50 rounded-lg p-4 text-center hover:bg-gray-100 transition">
-                    <div class="text-blue-600 mb-2">
-                        <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                        </svg>
-                    </div>
-                    <h3 class="font-semibold text-gray-900">{{ $categorie->nom }}</h3>
-                </a>
-                @endforeach
-            </div>
-        </div>
+    <x-categorie-populaire />
+        
     </div>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white mt-16">
-        <div class="container mx-auto px-4 py-8">
-            <div class="text-center">
-                <p>&copy; 2024 Boutique Ramtech. Tous droits réservés.</p>
-            </div>
-        </div>
-    </footer>
-</body>
-</html>
+@endsection

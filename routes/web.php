@@ -8,10 +8,11 @@ use App\Http\Controllers\CommandeController;
 use App\Http\Controllers\CategorieController;
 use App\Http\Controllers\LigneDeCommandeController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
+// Route::get('/', function () {
+//     // return view('welcome');
+    
+// });
+ Route::get('/', [ProduitController::class, 'index'])->name('produits.index');
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -65,7 +66,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('produits')->group(function () {
         // Route index déplacée vers la page d'accueil, donc on peut la supprimer ici
         // ou la garder pour l'administration
-        Route::get('/admin', [ProduitController::class, 'index'])->name('produits.index');
+        Route::get('/', [ProduitController::class, 'index'])->name('produits.index');
         Route::get('/create', [ProduitController::class, 'create'])->name('produits.create');
         // Route::post('/', [ProduitController::class, 'store'])->name('produits.store');
         Route::get('/{produit}', [ProduitController::class, 'show'])->name('produits.show');
@@ -82,7 +83,7 @@ Route::middleware(['auth'])->group(function () {
 
       Route::prefix('panier')->group(function () {
         Route::get('/', [PanierController::class, 'index'])->name('panier.index');
-        Route::post('/ajouter', [PanierController::class, 'ajouter'])->name('panier.ajouter');
+       Route::post('/panier/ajouter', [PanierController::class, 'store'])->name('panier.ajouter');
         Route::put('/{produit}', [PanierController::class, 'update'])->name('panier.update');
         Route::delete('/{produit}', [PanierController::class, 'supprimer'])->name('panier.supprimer');
         Route::post('/vider', [PanierController::class, 'vider'])->name('panier.vider');

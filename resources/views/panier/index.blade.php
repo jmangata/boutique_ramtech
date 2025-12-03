@@ -230,7 +230,7 @@
                     <!-- Actions globales du panier -->
                     <div class="p-6 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <!-- Bouton vider le panier -->
-                        <form action="{{ route('panier.supprimer') }}" method="DELETE">
+                        <form action="{{ route('panier.supprimer' , $item) }}" method="DELETE">
                             @csrf
                             @method('DELETE')
                             <button type="submit" 

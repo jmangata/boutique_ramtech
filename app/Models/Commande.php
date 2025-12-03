@@ -51,6 +51,11 @@ class Commande extends Model
         return $this->hasMany(LigneDeCommande::class);
     }
 
+     public function lignes(): HasMany
+    {
+        return $this->hasMany(LigneDeCommande::class);
+    }
+
     /**
      * Scope a query to only include pending orders.
      */
@@ -163,6 +168,6 @@ class Commande extends Model
      */
     public function getTotalItemsAttribute(): int
     {
-        return $this->ligneCommandes->sum('quantite');
+        return $this->ligneDeCommandes->sum('quantite');
     }
 }

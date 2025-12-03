@@ -20,9 +20,8 @@ class Produit extends Model
         'titre',
         'description',
         'prix',
-        'stock',
         'categorie_id',
-        'image_url'
+       
     ];
 
     /**
@@ -32,7 +31,6 @@ class Produit extends Model
      */
     protected $casts = [
         'prix' => 'decimal:2',
-        'stock' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -40,7 +38,7 @@ class Produit extends Model
     /**
      * Get the category that owns the product.
      */
-    public function category(): BelongsTo
+    public function categorie(): BelongsTo
     {
         return $this->belongsTo(Categorie::class, 'categorie_id');
     }
@@ -66,15 +64,15 @@ class Produit extends Model
      */
     public function scopeAvailable($query)
     {
-        return $query->where('stock', '>', 0);
+        // return $query->where('stock', '>', 0);
     }
 
     /**
      * Scope a query to only include products in a category.
      */
-    public function scopeInCategory($query, $categoryId)
+    public function scopeInCategorie($query, $categorieId)
     {
-        return $query->where('categorie_id', $categoryId);
+        return $query->where('categorie_id', $categorieId);
     }
 
     /**
@@ -136,4 +134,14 @@ class Produit extends Model
             default => 'gray'
         };
     }
+    public function show(Produit $produit)
+{
+    $similaires = Produit::where('categorie_id', $produit->categorie_id)
+        ->where('id', '!=', $produit->id)
+        ->limit(4)
+        ->get();
+
+    return view('produits.show', compact('produit', 'similaires'));
+}
+
 }

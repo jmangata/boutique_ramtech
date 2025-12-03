@@ -62,7 +62,7 @@ class Panier extends Model
     public function scopeWithAvailableProducts($query)
     {
         return $query->whereHas('produit', function ($q) {
-            $q->where('stock', '>', 0);
+            $q->where('produit_id', '>', 0);
         });
     }
 
@@ -82,35 +82,12 @@ class Panier extends Model
         return number_format($this->sous_total, 2, ',', ' ') . ' €';
     }
 
-    /**
-     * Vérifie si le produit est toujours disponible en quantité suffisante.
-     */
-    public function getEstDisponibleAttribute(): bool
-    {
-        return $this->produit->stock >= $this->quantite;
-    }
+    
 
-    /**
-     * Vérifie si le stock est faible pour ce produit.
-     */
-    public function getStockFaibleAttribute(): bool
-    {
-        return $this->produit->stock < 5 && $this->produit->stock > 0;
-    }
+   
+    
 
-    /**
-     * Vérifie si le produit est en rupture de stock.
-     */
-    public function getEstEnRuptureAttribute(): bool
-    {
-        return $this->produit->stock === 0;
-    }
+   
 
-    /**
-     * Quantité maximale pouvant être commandée (limité par le stock).
-     */
-    public function getQuantiteMaximaleAttribute(): int
-    {
-        return min($this->produit->stock, 99); // Limite à 99 pour éviter les abus
-    }
+   
 }
